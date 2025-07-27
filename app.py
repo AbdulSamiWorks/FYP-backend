@@ -5,7 +5,8 @@ import tempfile
 
 app = Flask(__name__)
 
-client = Client("aitoolsami/FYP")  # Your HF Space slug
+# Hugging Face Space slug (confirm this matches your Space)
+client = Client("aitoolsami/FYP")
 
 @app.route("/diagnose", methods=["POST"])
 def diagnose():
@@ -14,17 +15,22 @@ def diagnose():
 
     image = request.files["file"]
 
-    # Save to a temp file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-        image.save(tmp.name)
+    try:
+        # Save uploaded file to a temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            image.save(tmp.name)
 
-        # Positional argument (not named)
-        result = client.predict(
-            [handle_file(tmp.name)],
-            api_name="/predict"
-        )
+            # Predict using Hugging Face Space (expects list as input)
+            result = client.predict(
+                [handle_file(tmp.name)],  # Wrap in list for positional args
+                api_name="/predict"
+            )
 
-    return jsonify({"prediction": result})
+        return jsonify({"prediction": result})
+
+    except Exception as e:
+        # Return error details for debugging
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run()
