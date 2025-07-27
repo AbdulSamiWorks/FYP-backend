@@ -2,6 +2,96 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from gradio_client import Client, handle_file
 import tempfile
+import os
+import google.generativeai as genai
+
+# Initialize Flask
+app = Flask(__name__)
+CORS(app)
+
+# Hugging Face Space client
+client = Client("aitoolsami/FYP")
+
+# Gemini API configuration
+GEMINI_API_KEY = "AIzaSyDJrgBI9uDJV3CNP_Jiabico7_BKtLJUCA"
+genai.configure(api_key=GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel("gemini-pro-vision")
+
+# Gemini classification function
+def classify_with_gemini(image_path):
+    try:
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+
+        response = gemini_model.generate_content([
+            "Is this an image of a human eye's retina (ocular retinal image)? Respond only with 'retinal' or 'other'.",
+            genai.types.content.ImagePart.from_bytes(image_data, mime_type="image/png")
+        ])
+
+        result_text = response.text.lower().strip()
+        if "retinal" in result_text:
+            return {"type": "retinal", "confidence": 0.99}
+        else:
+            return {"type": "other", "confidence": 0.99}
+    except Exception as e:
+        return {"error": f"Gemini error: {str(e)}"}
+
+@app.route("/")
+def home():
+    return "✅ Flask backend is running"
+
+@app.route("/diagnose", methods=["POST"])
+def diagnose():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    image = request.files["file"]
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+        image.save(tmp.name)
+        tmp_path = tmp.name
+
+    try:
+        # Step 1: Gemini classification
+        gemini_result = classify_with_gemini(tmp_path)
+        if "error" in gemini_result:
+            return jsonify({"error": gemini_result["error"]}), 500
+
+        if gemini_result["type"] != "retinal":
+            return jsonify({
+                "type": "other",
+                "confidence": gemini_result["confidence"]
+            })
+
+        # Step 2: Send to HF if retinal
+        hf_result = client.predict(
+            img=handle_file(tmp_path),
+            api_name="/predict"
+        )
+
+        return jsonify({
+            "type": "retinal",
+            "confidence": gemini_result["confidence"],
+            "prediction": hf_result
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
+'''
+
+
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from gradio_client import Client, handle_file
+import tempfile
 
 app = Flask(__name__)
 CORS(app)  # Allow CORS from everywhere
@@ -34,3 +124,6 @@ def diagnose():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+    
+    '''

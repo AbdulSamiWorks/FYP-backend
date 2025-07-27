@@ -2,3 +2,4 @@ flask
 gradio_client
 gunicorn
 flask-cors
+google-generativeai==0.4.1
