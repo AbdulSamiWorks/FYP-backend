@@ -5,7 +5,7 @@ import tempfile
 
 app = Flask(__name__)
 
-client = Client("aitoolsami/FYP")  # your HF Space name
+client = Client("aitoolsami/FYP")  # Your HF Space slug
 
 @app.route("/diagnose", methods=["POST"])
 def diagnose():
@@ -14,11 +14,13 @@ def diagnose():
 
     image = request.files["file"]
 
-    # Save to temp file
+    # Save to a temp file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
         image.save(tmp.name)
+
+        # Positional argument (not named)
         result = client.predict(
-            img=handle_file(tmp.name),
+            [handle_file(tmp.name)],
             api_name="/predict"
         )
 
