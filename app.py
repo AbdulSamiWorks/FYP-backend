@@ -5,19 +5,19 @@ import tempfile
 import os
 import google.generativeai as genai
 
-# Initialize Flask
+# --- Flask Setup ---
 app = Flask(__name__)
 CORS(app)
 
-# Hugging Face Space client
-client = Client("aitoolsami/FYP")
-
-# Gemini API configuration
+# --- Gemini Setup ---
 GEMINI_API_KEY = "AIzaSyDJrgBI9uDJV3CNP_Jiabico7_BKtLJUCA"
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel("gemini-pro-vision")
 
-# Gemini classification function
+# --- Hugging Face Client ---
+client = Client("aitoolsami/FYP")
+
+# --- Gemini Classification Function ---
 def classify_with_gemini(image_path):
     try:
         with open(image_path, "rb") as f:
@@ -25,7 +25,7 @@ def classify_with_gemini(image_path):
 
         response = gemini_model.generate_content([
             "Is this an image of a human eye's retina (ocular retinal image)? Respond only with 'retinal' or 'other'.",
-            genai.types.content.ImagePart.from_bytes(image_data, mime_type="image/png")
+            genai.Part.from_data(data=image_data, mime_type="image/png")
         ])
 
         result_text = response.text.lower().strip()
@@ -36,6 +36,7 @@ def classify_with_gemini(image_path):
     except Exception as e:
         return {"error": f"Gemini error: {str(e)}"}
 
+# --- Routes ---
 @app.route("/")
 def home():
     return "✅ Flask backend is running"
@@ -54,6 +55,7 @@ def diagnose():
     try:
         # Step 1: Gemini classification
         gemini_result = classify_with_gemini(tmp_path)
+
         if "error" in gemini_result:
             return jsonify({"error": gemini_result["error"]}), 500
 
@@ -63,7 +65,7 @@ def diagnose():
                 "confidence": gemini_result["confidence"]
             })
 
-        # Step 2: Send to HF if retinal
+        # Step 2: Send to Hugging Face
         hf_result = client.predict(
             img=handle_file(tmp_path),
             api_name="/predict"
@@ -77,10 +79,12 @@ def diagnose():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
+# --- Run App Locally ---
 if __name__ == "__main__":
     app.run(debug=True)
 
