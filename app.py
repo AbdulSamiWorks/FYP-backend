@@ -1,12 +1,14 @@
-# app.py
 from flask import Flask, request, jsonify
 from gradio_client import Client, handle_file
 import tempfile
 
 app = Flask(__name__)
 
-# Hugging Face Space slug (confirm this matches your Space)
-client = Client("aitoolsami/FYP")
+client = Client("aitoolsami/FYP")  # Hugging Face Space slug
+
+@app.route("/")
+def home():
+    return "✅ Flask backend is running"
 
 @app.route("/diagnose", methods=["POST"])
 def diagnose():
@@ -15,22 +17,19 @@ def diagnose():
 
     image = request.files["file"]
 
-    try:
-        # Save uploaded file to a temp file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            image.save(tmp.name)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+        image.save(tmp.name)
 
-            # Predict using Hugging Face Space (expects list as input)
+        # Use correct keyword argument if your Space uses "img"
+        try:
             result = client.predict(
-                [handle_file(tmp.name)],  # Wrap in list for positional args
+                img=handle_file(tmp.name),  # ← named input
                 api_name="/predict"
             )
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-        return jsonify({"prediction": result})
-
-    except Exception as e:
-        # Return error details for debugging
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"prediction": result})
 
 if __name__ == "__main__":
     app.run()
