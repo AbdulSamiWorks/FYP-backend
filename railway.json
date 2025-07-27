@@ -6,7 +6,7 @@
   },
   "deploy": {
     "runtime": "V2",
-    "startCommand": "gunicorn railway:app --bind 0.0.0.0:$PORT",
+    "startCommand": "gunicorn app:app",
     "numReplicas": 1,
     "sleepApplication": false,
     "multiRegionConfig": {
