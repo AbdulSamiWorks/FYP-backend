@@ -67,8 +67,17 @@ def diagnose():
         if "error" in result:
             return jsonify({"error": result["error"]}), 500
 
+        # 🛠️ Unified response structure for non-retinal images
         if result["type"] != "retinal":
-            return jsonify({"Predicted Condition": "other", "confidence": result["confidence"]})
+            return jsonify({
+                "type": "other",
+                "confidence": result["confidence"],
+                "prediction": {
+                    "disease": "Other",
+                    "confidence": result["confidence"],
+                    "advice": "The uploaded image does not appear to be a retinal image. Please upload a valid fundus photo."
+                }
+            })
 
         # Step 2: Send to Hugging Face if retinal
         hf_result = client.predict(
@@ -91,4 +100,3 @@ def diagnose():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
